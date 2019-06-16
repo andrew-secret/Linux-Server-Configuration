@@ -5,3 +5,5 @@ Udacity Linux Server Configuration
 
 First you need a AWS account to login into AWS Lightsail. Then you should create a an instance
 
+Click Create button to create an instance.
+
