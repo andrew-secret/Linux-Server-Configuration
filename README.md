@@ -233,7 +233,7 @@ scp -v -P 2200 -i ~/.ssh/grader_key -r movieflix/ grader@3.121.183.105:~
 then I moved the `movieflix` folder to:
 
 ```
-sudeo mv /movieflix /var/www/
+sudo mv /movieflix /var/www/
 ```
 
 From the `/var/www` directory, change the permissions of the movieflix directory to grader using: sudo chown -R grader:grader movieflix/.
