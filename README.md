@@ -242,3 +242,34 @@ From the `/var/www` directory, change the permissions of the movieflix directory
 
 You have to rename your `app.py` (or something else) to `__init__.py`
 
+
+Remove params of your `run()` fn withn `app.py`:
+app.run()
+
+Replace `sqlite` with our `postgresql` database:
+# engine = create_engine("sqlite:///movieflix.db")
+engine = create_engine('postgresql://catalog:PASSWORD@localhost/movieflix')
+
+## Install all requirements for your application
+
+```
+sudo apt-get install python-pip
+```
+
+Install venv
+```
+sudo virtualenv venv
+```
+and activate it:
+```
+source venv/bin/activate
+```
+Adjust permissions for the `venv` folder:
+
+```
+sudo chmod -R 777 venv
+```
+
+```
+pip install Flask httplib2 request oauth2client sqlalchemy python-psycopg2
+```
