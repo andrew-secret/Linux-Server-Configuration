@@ -247,7 +247,7 @@ Remove params of your `run()` fn withn `app.py`:
 app.run()
 
 Replace `sqlite` with our `postgresql` database:
-# engine = create_engine("sqlite:///movieflix.db")
+engine = create_engine("sqlite:///movieflix.db")
 engine = create_engine('postgresql://catalog:PASSWORD@localhost/movieflix')
 
 ## Install all requirements for your application
@@ -273,3 +273,31 @@ sudo chmod -R 777 venv
 ```
 pip install Flask httplib2 request oauth2client sqlalchemy python-psycopg2
 ```
+
+### Configure Apache
+
+```
+<VirtualHost *:80>
+    ServerName Public-IP-Address
+    ServerAdmin admin@Public-IP-Address
+    WSGIScriptAlias / /var/www/movieflix/catalog.wsgi
+    <Directory /var/www/catalog/catalog/>
+        Order allow,deny
+        Allow from all
+    </Directory>
+    Alias /static /var/www/movieflix/static
+    <Directory /var/www/movieflix/static/>
+        Order allow,deny
+        Allow from all
+    </Directory>
+    ErrorLog ${APACHE_LOG_DIR}/error.log
+    LogLevel warn
+    CustomLog ${APACHE_LOG_DIR}/access.log combined
+</VirtualHost>
+```
+
+Enable the new virtual host `sudo a2ensite movieflix.conf`
+
+Finally you should restart your server: `sudo service apache2 restart`
+
+and go on your server `http://your-ip-address`
