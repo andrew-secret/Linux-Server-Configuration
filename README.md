@@ -1,4 +1,5 @@
 # Linux-Server-Configuration
+
 Udacity Linux Server Configuration
 
 ## AWS Lightsail
@@ -7,17 +8,20 @@ First you need a AWS account to login into AWS Lightsail. Then you should create
 
 Create a server instance via AWS Lightsail (follow the instructions).
 
-IP address : 3.121.183.105
+IP address : 18.195.216.23
 
 SSH port : 2200
 
-
 ## Configuration steps
 
-### Private key
-Download your private key `LightsailDefaultKey-{your-country}.pem` (i.e. `LightsailDefaultKey-eu-central.pem` to enable the connection via ssh.
+### Download your private key and connect with ubuntu user
+
+You have to download your private key in order to connect via ssh to your instance. This key can be downloaded fom AWS Lightsail and it should look like this:
+
+`LightsailDefaultKey-{your-country}.pem` (i.e. `LightsailDefaultKey-eu-central.pem`)
 
 Go into the directory where u place your private keys
+
 ```
 cd ~/.ssh/
 ```
@@ -27,277 +31,481 @@ and run (you could also rename the file to something more readable (e.g. udacity
 ```
 chmod 600 LightsailDefaultKey-eu-central.pem
 ```
-Now you connect via ssh to your remove server:
+
+Now you connect via ssh to your remove server with the `ubunutu` user:
 
 ```
 ssh -i udacity_key.rsa ubuntu@3.121.183.105
 ```
 
-You are connected, yay...
+You are connected, yay 🎉🎉🎉
 
-### Update your stuff
+### Create a grader user
 
-To ensure to have the latest packages installed on your server run following commands:
+To ensure that your server is properly protected against hackers your should setup a new user and disable `root` login.
 
-```
-sudo apt-get update
-sudo apt-get upgrade
-```
+Create a new user called grader:
 
-### Change default port 22 to 2200
-
-Since you established a connection to your remote server you can now do some security by changing the ssh (`22`) port to `2200`
-
-```
-sudo nano /etc/ssh/sshd_config
-```
-
-Change port from `22` to `2200`
-
-
-Restart SSH with `sudo service ssh restart`
-
-
-### Step 5: Configure the Uncomplicated Firewall (UFW)
-
-Configure the default firewall for Ubuntu to only allow incoming connections for SSH (port 2200), HTTP (port 80), and NTP (port 123).
-  ```
-  sudo ufw status                  # The UFW should be inactive.
-  sudo ufw default deny incoming   # Deny any incoming traffic.
-  sudo ufw default allow outgoing  # Enable outgoing traffic.
-  sudo ufw allow 2200/tcp          # Allow incoming tcp packets on port 2200.
-  sudo ufw allow www               # Allow HTTP traffic in.
-  sudo ufw allow 123/udp           # Allow incoming udp packets on port 123.
-  sudo ufw deny 22                 # Deny tcp and udp packets on port 53.
-  ```
-
-Turn UFW on: `sudo ufw enable`. The output should be like this:
-
-### Add grader user
-Usally you setup a server and add some users to it and give them only the permessions they. Another important thing is you also deactivate the default root login to protect your server from crazy hackers.
-
-1. Create a user called `grader`
 ```
 sudo adduser grader
 ```
 
-Create a directory to enable sudo right for the `grader` user
+Create a `grader` file to handle permissions for this user:
+
 ```
 sudo nano /etc/sudoers.d/grader
 ```
 
-Now just add the following line to enable sudo access:
+Now you can give `grader` sudo permissions by adding this line:
 
 ```
 grader ALL=(ALL:ALL) ALL
 ```
-Close and save the file.
 
+For security reasons we also want to have `ssh` connection for `grader`. Therefore we have to generate a key pair with `ssh-keygen` on your local machine.
 
+Just follow this steps here:
 
-You need to create a ssh keypair to enable ssh connection for your user. Therefore I use `ssh-keygen` on my local machine. It automatically generates for your a keypair for your local enviroment and one key for your server.
+1. Create ssh key pair:
 
 ```
 ssh-keygen
 ```
 
-follow the instructions and and setup a name for your key: `udacity_key`
-
-copy your public key (e.g. `udacity_key.pub`) and connect to your server:
-
-Create a new directory called ~/.ssh (mkdir .ssh)
-
-Create a new directory:
+2. Name it grader_key
 
 ```
-mkdir .ssh
+grader_key
 ```
 
-Paste your public key into the `authorized_keys` file:
+3. Copy your public key:
+
 ```
-sudo nano ~/.ssh/authorized_keys
+sudo cat ~/.ssh/grader_key.pub
 ```
 
-To secure even more you can disable Password authentication to allow only connections via ssh for this user:
+4. Connect to your server with `ubuntu` and go to this directory:
+
+```
+cd /home/grader/
+```
+
+5. Create a new directory called .ssh
+
+```
+sudo mkdir .ssh
+```
+
+6. Paste the public key to the `authorized_keys` file:
+
+```
+sudo nano .ssh/authorized_keys
+```
+
+7. and adjust the permissions to:
+
+```
+sudo chmod 700 /home/grader/.ssh
+```
+
+```
+sudo chmod 644 /home/grader/.ssh/authorized_keys
+```
+
+7. Change the owner:
+
+```
+sudo chown -R grader:grader /home/grader/.ssh
+```
+
+8. Enfore key-based `ssh` authentication open this file:
 
 ```
 sudo nano /etc/ssh/sshd_config
 ```
 
-and set `PasswordAuthentication` to `no`
+**Change config settings:**
 
-Now you should do a restart and grab a coffee:
+`PasswordAuthentication` to `no`
 
-```
-sudo service ssh restart
-```
+Probably this line is commented in that case just remove the hashtag and change the `Port` to `2200`.
 
-### Connect with grader
+`PermitRootLogin` to `no`
 
-Now you can connect via ssh with our new user `grader` on the remove server
+To apply your changes restart it:
 
 ```
-ssh -i ~/.ssh/udacity_key -p 2200 grader@3.121.183.105
+ sudo service ssh restart
 ```
 
-### Install and configure Apache to serve a Python mod_wsgi application
+The last thing is that you have to go to your AWS Lightsail account and add the `2200` port to allow connections via this port.
 
-While logged in as `grader`, install Apache: `sudo apt-get install apache2`.
-Enter public IP of the Amazon Lightsail instance into browser.
+### Configure Firewall
 
-Run `sudo apt-get install python-setuptools libapache2-mod-wsgi` to install mod-wsgi module
+To only allow connections for `ssh` (port 2200), `http` (port 80), and `ntp` (port 123) you have to do:
 
+```
+sudo ufw default deny incoming
+```
 
-### Install and configure PostgreSQL
+```
+sudo ufw default allow outgoing
+```
 
-- While logged in as `grader`, install PostgreSQL:
- `sudo apt-get install postgresql`.
-- PostgreSQL should not allow remote connections. In the  `/etc/postgresql/9.5/main/pg_hba.conf` file, you should see:
-  ```
-  local   all             postgres                                peer
-  local   all             all                                     peer
-  host    all             all             127.0.0.1/32            md5
-  host    all             all             ::1/128                 md5
-  ```
+```
+sudo ufw allow 2200/tcp
+```
 
-- Switch to the `postgres` user: `sudo su - postgres`.
-- Open PostgreSQL interactive terminal with `psql`.
-- Create the `catalog` user with a password and give them the ability to create databases:
-  ```
-  postgres=# CREATE ROLE catalog WITH LOGIN PASSWORD 'catalog';
-  postgres=# ALTER ROLE catalog CREATEDB;
-  ```
+```
+sudo ufw allow 80/tcp
+```
 
-- List the existing roles: `\du`. The output should be like this:
-  ```
-                                     List of roles
-   Role name |                         Attributes                         | Member of 
-  -----------+------------------------------------------------------------+-----------
-   catalog   | Create DB                                                  | {}
-   postgres  | Superuser, Create role, Create DB, Replication, Bypass RLS | {}
-  ```
+```
+sudo ufw allow 123/udp
+```
 
-- Exit psql: `\q`.
-- Switch back to the `grader` user: `exit`.
-- Create a new Linux user called `catalog`: `sudo adduser catalog`. Enter password and fill out information.
-- Give to `catalog` user the permission to sudo. Run: `sudo visudo`.
-- Search for the lines that looks like this:
-  ```
-  root    ALL=(ALL:ALL) ALL
-  grader  ALL=(ALL:ALL) ALL
-  ```
+```
+sudo ufw enable
+```
 
-- Below this line, add a new line to give sudo privileges to `catalog` user.
-  ```
-  root    ALL=(ALL:ALL) ALL
-  grader  ALL=(ALL:ALL) ALL
-  catalog  ALL=(ALL:ALL) ALL
-  ```
+### Connect as grader via ssh
 
-- Save and exit using CTRL+X and confirm with Y.
-- Verify that `catalog` has sudo permissions. Run `su - catalog`, enter the password, run `sudo -l` and enter the password again. The output should be like this:
+```
+ssh -i ~/.ssh/grader_key grader@18.195.216.23 -p 2200
+```
 
-  ```
-  Matching Defaults entries for catalog on ip-172-26-13-170.us-east-2.compute.internal:
-      env_reset, mail_badpass,
-      secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/snap/bin
-  
-  User catalog may run the following commands on ip-172-26-13-170.us-east-2.compute.internal:
-      (ALL : ALL) ALL
-  ```
+### Update packages
 
-- While logged in as `catalog`, create a database: `createdb catalog`.
-- Run `psql` and then run `\l` to see that the new database has been created. The output should be like this:
-  ```
-                                    List of databases
-     Name    |  Owner   | Encoding |   Collate   |    Ctype    |   Access privileges   
-  -----------+----------+----------+-------------+-------------+-----------------------
-   catalog   | catalog  | UTF8     | en_US.UTF-8 | en_US.UTF-8 | 
-   postgres  | postgres | UTF8     | en_US.UTF-8 | en_US.UTF-8 | 
-   template0 | postgres | UTF8     | en_US.UTF-8 | en_US.UTF-8 | =c/postgres          +
-             |          |          |             |             | postgres=CTc/postgres
-   template1 | postgres | UTF8     | en_US.UTF-8 | en_US.UTF-8 | =c/postgres          +
-             |          |          |             |             | postgres=CTc/postgres
-  (4 rows)
-  ```
-- Exit psql: `\q`.
-- Switch back to the `grader` user: `exit`.
+It will create a list of packages which can be updated:
+
+```
+sudo apt-get update
+```
+
+Now you can upgrade this by having your list in place with:
+
+```
+sudo apt-get upgrade
+```
+
+### Install Apache and mod_wsgi
+
+Apache2
+
+```
+sudo apt-get install apache2
+```
+
+mod_wsgi
+
+```
+sudo apt-get install libapache2-mod-wsgi python-dev
+```
+
+Enable mod_wsg:
+
+```
+sudo a2enmod wsgi
+```
+
+Start your apache2 server
+
+```
+sudo service apache2 start
+```
+
+You can double check it in your browser:
+
+```
+http://18.195.216.23
+```
+
+It should show you the default apache2 page.
 
 ### Copy your app to your remote server
+
 In my case I wanted to put my data remotely on my server:
 
 ```
 scp -v -P 2200 -i ~/.ssh/grader_key -r movieflix/ grader@3.121.183.105:~
 ```
 
-then I moved the `movieflix` folder to:
+Go to:
 
 ```
-sudo mv /movieflix /var/www/
+cd /var/www
 ```
 
-From the `/var/www` directory, change the permissions of the movieflix directory to grader using: sudo chown -R grader:grader movieflix/.
+create a `movieflix` directory:
 
-### Adjust your app
+```
+sudo mkdir movieflix
+```
 
-You have to rename your `app.py` (or something else) to `__init__.py`
+Change owner:
 
+```
+sudo chown -R grader:grader movieflix
+```
 
-Remove params of your `run()` fn withn `app.py`:
-app.run()
+then move the `movieflix` folder to:
 
-Replace `sqlite` with our `postgresql` database:
-engine = create_engine("sqlite:///movieflix.db")
-engine = create_engine('postgresql://catalog:PASSWORD@localhost/movieflix')
+```
+sudo mv /movieflix /var/www/movieflix/
+```
 
-## Install all requirements for your application
+Your folder structure should look like this:
+
+```
+├── var/www
+|   └── movieflix/
+|   |    └── movieflix/
+|   |    |   |-- populate_db.py
+|   |    |   |-- database_setup.py
+|   |    |   |-- app.py
+|   |    |   └── ...
+```
+
+### Install pip and virtualenv
+
+Just install the internet (in the following directory: `/var/www/movieflix/):
 
 ```
 sudo apt-get install python-pip
 ```
 
-Install venv
+```
+sudo pip install virtualenv
+```
+
 ```
 sudo virtualenv venv
 ```
-and activate it:
-```
-source venv/bin/activate
-```
-Adjust permissions for the `venv` folder:
+
+Ajust permissions to your `venv` folder:
 
 ```
 sudo chmod -R 777 venv
 ```
 
+Activate virtualenv
+
 ```
-pip install Flask httplib2 request oauth2client sqlalchemy python-psycopg2
+source venv/bin/activate
 ```
 
-### Configure Apache
+Since your app has `requirements.txt` with all your dependencies you can run:
+
+```
+sudo pip install -r movieflix/requirements.txt
+```
+
+Install pythons PostgresSql adapter:
+
+```
+sudo apt-get install python-psycopg2
+```
+
+### Configure your virtual host
+
+Create and open this file:
+
+```
+sudo nano /etc/apache2/sites-available/movieflix.conf
+```
+
+and paste this Block into the file:
 
 ```
 <VirtualHost *:80>
-    ServerName Public-IP-Address
-    ServerAdmin admin@Public-IP-Address
-    WSGIScriptAlias / /var/www/movieflix/catalog.wsgi
-    <Directory /var/www/catalog/catalog/>
-        Order allow,deny
-        Allow from all
-    </Directory>
-    Alias /static /var/www/movieflix/static
-    <Directory /var/www/movieflix/static/>
-        Order allow,deny
-        Allow from all
-    </Directory>
-    ErrorLog ${APACHE_LOG_DIR}/error.log
-    LogLevel warn
-    CustomLog ${APACHE_LOG_DIR}/access.log combined
+   ServerName 18.195.216.23
+   ServerAlias andruska.me
+   ServerAdmin grader@18.195.216.23
+   WSGIDaemonProcess movieflix python-path=/var/www/movieflix:/var/www/movieflix/venv/lib/python2.7/site-packages
+   WSGIProcessGroup movieflix
+   WSGIScriptAlias / /var/www/movieflix/movieflix.wsgi
+   <Directory /var/www/movieflix/movieflix/>
+       Order allow,deny
+       Allow from all
+   </Directory>
+   Alias /static /var/www/movieflix/movieflix/static
+   <Directory /var/www/movieflix/movieflix/static/>
+       Order allow,deny
+       Allow from all
+   </Directory>
+   ErrorLog ${APACHE_LOG_DIR}/error.log
+   LogLevel warn
+   CustomLog ${APACHE_LOG_DIR}/access.log combined
 </VirtualHost>
 ```
 
-Enable the new virtual host `sudo a2ensite movieflix.conf`
+As you can see, there's not much here. We will customize the items here for our `domain` and add some additional directives. This virtual host section matches any requests that are made on port 80, the default HTTP port.
 
-Finally you should restart your server: `sudo service apache2 restart`
+### Setup the wsgi file
 
-and go on your server `http://your-ip-address`
+Create and open a new file called `movieflix.wsgi`:
+
+```
+sudo nano /var/www/movieflix/movieflix.wsgi
+```
+
+Add following code to this file:
+
+```
+import sys
+import logging
+logging.basicConfig(stream=sys.stderr)
+sys.path.insert(0, "/var/www/movieflix/")
+
+from movieflix import app as application
+application.secret_key = 'secret'
+```
+
+### Adjust movieflix application
+
+Since we don't have a `localhost` enviroment anymore we need to adjust our application to the real world:
+
+1. Go to your root directory of your application:
+
+```
+cd /var/www/movieflix/movieflix
+```
+
+2. Rename `app.py` to `__init__.py`
+
+```
+sudo mv app.py __init__.py
+```
+
+3. Adjust relative path to absolute one for the `client_secrets.json` in the `__init__.py` file:
+
+```
+sudo nano __init__.py
+```
+
+You need to change your path to:
+
+```
+/var/www/movieflix/movieflix/client_secrets.json
+```
+
+### Install and configure PostgreSql
+
+Install more stuff from the internet:
+
+```
+sudo apt-get install libpq-dev python-dev
+```
+
+For more information you can have a look here:
+
+https://packages.debian.org/de/sid/libpq-dev
+
+https://packages.debian.org/de/sid/python-dev
+
+Install PostgreSql:
+
+```
+sudo apt-get install postgresql postgresql-contrib
+```
+
+Change to the `postgres` user:
+
+```
+sudo -u postgres psql
+```
+
+Now you can perform database operations.
+
+1. Connect to the database:
+
+```
+\c movieflix
+```
+
+2. Create a user with a password:
+
+```
+CREATE USER movieflix WITH PASSWORD 'movieflix';
+```
+
+3. Give your user permission to alter the database:
+
+```
+ALTER USER movieflix CREATEDB;
+```
+
+4. Create your database `movieflix`:
+
+```
+CREATE DATABASE movieflix WITH OWNER movieflix;
+```
+
+5. Remove access privileges
+
+```
+REVOKE ALL ON SCHEMA public FROM public;
+```
+
+6. Grant all permissions to movieflix role:
+
+```
+GRANT ALL ON SCHEMA public TO movieflix;
+```
+
+7. Close session with PostgreSql:
+
+```
+\q
+```
+
+Now we need to adjust our application again.
+
+You have to edit these files in order to connect to our postgres database:
+
+`database_setup.py`
+
+`populate_db.py`
+
+`__init__.py`
+
+In these files you have to find this code snippet:
+
+```
+engine = create_engine('sqlite:///movie-catalog.db',
+                       connect_args={'check_same_thread': False})
+```
+
+and replace it with:
+
+```
+create_engine('postgresql://movieflix:movieflix@localhost/movieflix')
+```
+
+### Activate movieflix virtual host
+
+Now you can enable this virtual host:
+
+```
+sudo a2ensite movieflix.conf
+```
+
+### Run your application
+
+Now you can setup your database by (please ensure that you are in this directory `/var/www/movieflix/movieflix`):
+
+```
+python database_setup.py
+```
+
+Populate your database with some data:
+
+```
+python populate_db.py
+```
+
+Now you can restart apache:
+
+```
+sudo service apache2 restart
+```
