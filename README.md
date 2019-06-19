@@ -10,6 +10,8 @@ Create a server instance via AWS Lightsail (follow the instructions).
 
 IP address : 18.195.216.23
 
+Domain: http://andruska.me
+
 SSH port : 2200
 
 ## Configuration steps
@@ -508,4 +510,18 @@ Now you can restart apache:
 
 ```
 sudo service apache2 restart
+```
+
+### Debugging
+
+If you're reading this something went wrong right? I received many times this weird
+
+```
+Internal 500 Server error
+```
+
+Which was not really helpful for me, but there is a way how you can debug your server to find your bug:
+
+```
+sudo cat /var/log/apache2/error.log
 ```
